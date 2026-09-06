@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+import sys
+import argparse
+import requests
+
+def main():
+    # Set up professional CLI argument parsing
+    parser = argparse.ArgumentParser(
+        description="A lightweight web reconnaissance and admin path finder tool."
+    )
+    parser.add_argument(
+        "-u", "--url", 
+        required=True, 
+        help="Target website URL (e.g., http://192.168.1.50)"
+    )
+    parser.add_argument(
+        "-w", "--wordlist", 
+        default="/usr/share/wordlists/common.txt", 
+        help="Path to custom wordlist file"
+    )
+    
+    args = parser.parse_args()
+    target_url = args.url
+    
+    # Default built-in fallback wordlist if no external file is provided
+    default_paths = [
+        "admin", "dashboard", "login", "config", "api", 
+        "server-status", "backup.zip", "test", "robots.txt"
+    ]
+    
+    print(f"[*] Scanning target: {target_url}\n")
+    
+    for path in default_paths:
+        url = f"{target_url.rstrip('/')}/{path}"
+        try:
+            response = requests.get(url, timeout=3, allow_redirects=False)
+            
+            if response.status_code == 200:
+                print(f"[+] FOUND (200 OK): {url}")
+            elif response.status_code == 403:
+                print(f"[!] FORBIDDEN (403): {url} (Protected area)")
+            elif response.status_code in [301, 302]:
+                print(f"[~] REDIRECT ({response.status_code}): {url}")
+                
+        except requests.exceptions.RequestException:
+            pass
+
+if __name__ == "__main__":
+    main()
