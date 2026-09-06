@@ -4,7 +4,6 @@ import argparse
 import requests
 
 def main():
-    # Set up professional CLI argument parsing
     parser = argparse.ArgumentParser(
         description="A lightweight web reconnaissance and admin path finder tool."
     )
@@ -18,32 +17,62 @@ def main():
         default="/usr/share/wordlists/common.txt", 
         help="Path to custom wordlist file"
     )
+    parser.add_argument(
+        "-o", "--output",
+        help="Path to save scan results to a text file"
+    )
     
     args = parser.parse_args()
     target_url = args.url
     
-    # Default built-in fallback wordlist if no external file is provided
     default_paths = [
-        "admin", "dashboard", "login", "config", "api", 
-        "server-status", "backup.zip", "test", "robots.txt"
+        "admin", "administrator", "admin/login", "admin_area", "dashboard",
+        "moderator", "controlpanel", "cp", "manage", "management",
+        "login", "signin", "auth", "register", "signup", "user/login",
+        "config", "configuration", "setup", "install", "settings",
+        "environment", ".env", "phpinfo.php", "server-status",
+        "api", "api/v1", "api/v2", "swagger", "docs", "graphql",
+        "backup", "backups", "bak", "archive.zip", "db.sql", "error.log",
+        "test", "robots.txt", "sitemap.xml", "wp-admin", "wp-login.php",
+        "panel", "webmail", "db", "database", "phpmyadmin"
     ]
     
     print(f"[*] Scanning target: {target_url}\n")
     
-    for path in default_paths:
-        url = f"{target_url.rstrip('/')}/{path}"
+    outfile = None
+    if args.output:
         try:
-            response = requests.get(url, timeout=3, allow_redirects=False)
+            outfile = open(args.output, "w", encoding="utf-8")
+            outfile.write(f"Scan results for target: {target_url}\n\n")
+        except IOError as e:
+            print(f"[-] Error opening output file: {e}")
+            sys.exit(1)
             
-            if response.status_code == 200:
-                print(f"[+] FOUND (200 OK): {url}")
-            elif response.status_code == 403:
-                print(f"[!] FORBIDDEN (403): {url} (Protected area)")
-            elif response.status_code in [301, 302]:
-                print(f"[~] REDIRECT ({response.status_code}): {url}")
+    try:
+        for path in default_paths:
+            url = f"{target_url.rstrip('/')}/{path}"
+            try:
+                response = requests.get(url, timeout=3, allow_redirects=False)
                 
-        except requests.exceptions.RequestException:
-            pass
+                message = ""
+                if response.status_code == 200:
+                    message = f"[+] FOUND (200 OK): {url}"
+                elif response.status_code == 403:
+                    message = f"[!] FORBIDDEN (403): {url} (Protected area)"
+                elif response.status_code in [301, 302]:
+                    message = f"[~] REDIRECT ({response.status_code}): {url}"
+                    
+                if message:
+                    print(message)
+                    if outfile:
+                        outfile.write(message + "\n")
+                        
+            except requests.exceptions.RequestException:
+                pass
+    finally:
+        if outfile:
+            outfile.close()
+            print(f"\n[*] Results successfully saved to {args.output}")
 
 if __name__ == "__main__":
     main()
